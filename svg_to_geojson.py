@@ -12,7 +12,7 @@ import json
 """ Settings """
 #Zet je vector bestand in de zelfde map als dit script en vul hieronder te naam van het bestand in
 #onder 'name', zonder extentie!
-name = 'body'
+name = 'paths'
 input_svg = f"{name}.svg"
 output_json = f"{name}.json"
 
@@ -20,6 +20,7 @@ output_json = f"{name}.json"
 #te verhogen.
 samples = 50
 mirrored = True
+compression = True
 
 def bezier_to_points(path_str, samples=50):
     path = parse_path(path_str)
@@ -42,7 +43,39 @@ def points_to_deltas(points):
         dx = points[i][0] - points[i-1][0]
         dy = points[i][1] - points[i-1][1]
         deltas.append([dx, dy])
+    deltas = [x for x in deltas if x != [0,0]]
     return deltas
+
+def deltas_compression(delta):
+    if len(delta) <= 4:
+        return delta
+    deltas = [delta[0]]
+    _x = _y = 0
+    for index, d in enumerate(delta[1:], start=1):
+        cx = d[0]
+        cy = d[1]
+
+        if index == len(delta)-1:
+            deltas.append([_x + cx,_y + cy])
+            break
+        nx = delta[index+1][0]
+        ny = delta[index+1][1]
+
+        if (cx >= 0 and cy >= 0 and nx >= 0 and ny >= 0) or (cx <= 0 and cy <= 0 and nx <= 0 and ny <= 0):
+            if cx == nx == 0:
+                _y += cy
+                continue
+            elif cy == ny == 0:
+                _x += cx
+                continue
+            else:
+                deltas.append([_x + cx,_y + cy])
+                _x = _y = 0
+        else:
+            deltas.append([_x + cx,_y + cy])
+            _x = _y = 0            
+    return deltas
+
 
 def svg_to_topology(svg_file, samples=50):
     tree = ET.parse(svg_file)
@@ -63,14 +96,23 @@ def svg_to_topology(svg_file, samples=50):
             points.append(points[0])
 
         deltas = points_to_deltas(points)
+        if compression:
+            deltas = deltas_compression(deltas)
+
         arc_index = len(arcs)
         arcs.append(deltas)
+
+        try:
+            locationPath = f"""{int(path_elem.attrib.get("id", i+1)):03}"""
+        except:
+            locationPath = path_elem.attrib.get("id", i+1)
 
         geometry = {
             "type": "Polygon",
             "arcs": [[arc_index]],
             "properties": {
-            "name": path_elem.attrib.get("id", f"unnamed_{i+1}")
+                "locationPath": f"""WO-{locationPath}""",
+                "buildingCode": "WKD"
             },
             # "properties": {
             #     "buildingCode": path_elem.attrib.get("data-code", "UNKNOWN"),
