@@ -12,7 +12,7 @@ import json
 """ Settings """
 #Zet je vector bestand in de zelfde map als dit script en vul hieronder te naam van het bestand in
 #onder 'name', zonder extentie!
-name = 'paths'
+name = '251126_Moovle heatmap'
 input_svg = f"{name}.svg"
 output_json = f"{name}.json"
 
@@ -111,7 +111,7 @@ def svg_to_topology(svg_file, samples=50):
             "type": "Polygon",
             "arcs": [[arc_index]],
             "properties": {
-                "locationPath": f"""WO-{locationPath}""",
+                "locationPath": f"""{locationPath}""",
                 "buildingCode": "WKD"
             },
             # "properties": {
